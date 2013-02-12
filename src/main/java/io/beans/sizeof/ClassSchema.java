@@ -1,5 +1,6 @@
 package io.beans.sizeof;
 
+import io.beans.util.SwissArmyKnife;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -96,7 +97,17 @@ public abstract class ClassSchema<T> {
 
     public abstract long flatSize(T instance);
 
-    private final static long[] refsStart = new long[0];
+    private static class FieldRef {
+        final String name;
+        final long ref;
+
+        FieldRef(String name, long ref) {
+            this.name = name;
+            this.ref = ref;
+        }
+    }
+
+    private final static FieldRef[] refsStart = new FieldRef[0];
 
     @Override
     public String toString() {
@@ -106,13 +117,13 @@ public abstract class ClassSchema<T> {
     private static class ObjectClassSchema<T> extends ClassSchema<T> {
         final long size;
 
-        final long[] refs;
+        final FieldRef[] refs;
 
         private ObjectClassSchema(Class<T> type, FieldFilter filter) {
             super(type);
 
             long s = emptyObjectSize;
-            long[] r = refsStart;
+            FieldRef[] r = refsStart;
 
             int i = 0;
             Class<?> lastFieldType = null;
@@ -133,7 +144,7 @@ public abstract class ClassSchema<T> {
 
                     if (filter.accept(f)) {
                         if (i >= r.length) r = Arrays.copyOf(r, i + 16);
-                        r[i++] = offset;
+                        r[i++] = new FieldRef(type.getName() + "#" + f.getName(), offset);
                     }
                 }
             } while ((c = c.getSuperclass()) != null);
@@ -152,9 +163,9 @@ public abstract class ClassSchema<T> {
 
         @Override
         void safeIterate(Object container, FieldCallback callback) {
-            for (long r : refs) {
-                Object o = unsafe.getObject(container, r);
-                callback.visit(o);
+            for (FieldRef r : refs) {
+                Object o = unsafe.getObject(container, r.ref);
+                callback.visit(r.name, o);
             }
         }
 
@@ -206,14 +217,17 @@ public abstract class ClassSchema<T> {
     }
 
     private static class ObjectArraySchema<T> extends ArraySchema<T> {
+        final String refName;
+
         private ObjectArraySchema(Class<T> type) {
             super(type);
+            refName = SwissArmyKnife.fullPrint(type);
         }
 
         @Override
         void safeIterate(Object array, FieldCallback callback) {
             for (Object element : (Object[]) array) {
-                callback.visit(element);
+                callback.visit(refName, element);
             }
         }
     }
@@ -245,7 +259,7 @@ public abstract class ClassSchema<T> {
                     long addr = unsafe.staticFieldOffset(f);
                     Object val = unsafe.getObject(cookie, addr);
 
-                    fc.visit(val);
+                    fc.visit(f.getName(), val);
                 }
             }
         } while ((c = c.getSuperclass()) != null);

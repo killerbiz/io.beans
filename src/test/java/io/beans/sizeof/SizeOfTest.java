@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 
 import io.beans.util.SwissArmyKnife;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -33,7 +34,7 @@ public class SizeOfTest {
         assertEquals(0, size);
 
         size = SizeOf.sizeOf(new Object());
-        assertTrue(12 <= size && size <= 24);
+        assertTrue(4 <= size && size <= 24);
     }
 
     @Test
@@ -73,7 +74,7 @@ public class SizeOfTest {
         ClassStats<Rectangle> cs = c.statsFor(Rectangle.class);
         assertEquals(sSize, cs.totalSize());
         assertEquals(1, cs.instanceCount());
-        assertEquals(10, cs.referencedBy());
+        assertEquals(10, cs.referencedBy()[0].getCount());
 
         for (int i = 0; i < 10; i++) {
             sarr[i] = new Rectangle(1 * i, 2 * i, 3 * i, 4 * i);
@@ -84,7 +85,7 @@ public class SizeOfTest {
         cs = c.statsFor(Rectangle.class);
         assertEquals(10 * sSize, cs.totalSize());
         assertEquals(10, cs.instanceCount());
-        assertEquals(10, cs.referencedBy());
+        assertEquals(10, cs.referencedBy()[0].getCount());
 
         Set<Rectangle> rects = new HashSet<Rectangle>();
         for (Rectangle r : cs.instances()) {
@@ -266,6 +267,30 @@ public class SizeOfTest {
         c.measure(m);
         assertNull(c.statsFor(NonCounting.class));
         assertNotNull(c.statsFor(Counting.class));
+    }
+
+    @Test
+    public void referenceTest() {
+        String referenced = "Hello World!";
+        AtomicReference<String> ref1 = new AtomicReference<String>(referenced);
+        List<String> ref2 = new ArrayList<String>();
+        ref2.add(referenced);
+        String[] ref3 = new String[] { referenced, referenced, referenced };
+
+        Collector c = SizeOf.createCollectorWith(ref1, ref2, ref3);
+        LOGGER.info(SizeOf.printStats(c));
+
+        ClassStats<String> stats = c.statsFor(String.class);
+        ClassStats.Reference[] ref = stats.referencedBy();
+        assertEquals(3, ref[0].getCount());
+        assertEquals(String.class.getName() + "[]", ref[0].getName());
+        assertEquals(1, ref[1].getCount());
+        assertEquals(1, ref[2].getCount());
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(SizeOfTest.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     // @Test // Long-running test - disabled

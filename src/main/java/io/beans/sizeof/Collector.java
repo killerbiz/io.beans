@@ -24,7 +24,7 @@ public class Collector implements Stats {
 
         int instanceCount;
 
-        int referencedBy;
+        final Map<String, ClassStats.Reference> referencedBy = new HashMap<String, ClassStats.Reference>();
 
         ClassCollector(Environment env, Class<T> type) {
             assert !type.isInterface();
@@ -40,8 +40,10 @@ public class Collector implements Stats {
         /**
          * I was referenced by some other bean.
          */
-        void ref(T instance, Measurement caller) {
-            referencedBy++;
+        void ref(String refName, T instance, Measurement caller) {
+            ClassStats.Reference r = referencedBy.get(refName);
+            if (r == null) referencedBy.put(refName, new ClassStats.Reference(refName, 1));
+            else r.increment();
 
             execute(instance, caller, false);
         }
@@ -91,28 +93,28 @@ public class Collector implements Stats {
         }
 
         @Override
-        void ref(T instance, Measurement caller) {
+        void ref(String refName, T instance, Measurement caller) {
             // Do nothing - don't iterate through fields!
         }
     }
 
     static class MemoryCountingClassCollector<T> extends ClassCollector<T> {
-        final Measurement measurement;
+        final Measurement classSpecificMeasurement;
 
         MemoryCountingClassCollector(Environment env, Class<T> type) {
             super(env, type);
-            measurement = new Measurement(env);
+            classSpecificMeasurement = new Measurement(env);
         }
 
         @Override
-        void calc(T instance, Measurement measurement) {
-            super.calc(instance, measurement);
-            this.measurement.measure(instance, schema);
+        void calc(T instance, Measurement globalMeasurement) {
+            classSpecificMeasurement.measure(instance, schema);
+            super.calc(instance, globalMeasurement);
         }
 
         @Override
         long totalSize() {
-            return measurement.totalSize;
+            return classSpecificMeasurement.totalSize;
         }
     }
 
@@ -154,15 +156,15 @@ public class Collector implements Stats {
         }
 
         @Override
-        public void visit(Object value) {
+        public void visit(String refName, Object value) {
             if (value != null) {
-                refTo(value);
+                refTo(refName, value);
             }
         }
 
-        private <T> void refTo(T value) {
+        private <T> void refTo(String refName, T value) {
             ClassCollector<T> cc = getClassCollector(value);
-            cc.ref(value, this);
+            cc.ref(refName, value, this);
         }
 
         @Override

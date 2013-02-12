@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Set;
 
 import io.beans.sizeof.Collector.ClassCollector;
+import java.util.Arrays;
+import java.util.Comparator;
 
 
 public class Environment {
@@ -70,7 +72,7 @@ public class Environment {
     final FieldCallback directGlobalSetter = new FieldCallback() {
 
         @Override
-        public void visit(Object value) {
+        public void visit(String refName, Object value) {
             addGlobalInstance(value);
         }
 
@@ -83,7 +85,7 @@ public class Environment {
     final FieldCallback deepGlobalSetter = new FieldCallback() {
 
         @Override
-        public void visit(Object value) {
+        public void visit(String refName, Object value) {
             iterateDeep(value, directGlobalSetter);
         }
 
@@ -264,7 +266,7 @@ public class Environment {
 
         final long totalSize;
 
-        final int referencedBy;
+        final Map<String, Reference> referencedBy;
 
         final T[] instances;
 
@@ -280,7 +282,7 @@ public class Environment {
             int n = cc.instanceCount;
             @SuppressWarnings("unchecked")
             T[] instanceArray = (T[]) Array.newInstance(type, n);
-            int[] referenceCounts = new int[n];
+            int[] refCounts = new int[n];
             int i = 0;
             for (Map.Entry<Object, Integer> e : cc.instancesToRefCounts.entrySet()) {
                 Integer count = e.getValue();
@@ -288,11 +290,11 @@ public class Environment {
                 if (count == null) continue;
 
                 instanceArray[i] = type.cast(e.getKey());
-                referenceCounts[i++] = count;
+                refCounts[i++] = count;
             }
 
             this.instances = instanceArray;
-            this.referenceCounts = referenceCounts;
+            this.referenceCounts = refCounts;
         }
 
         @Override
@@ -316,8 +318,18 @@ public class Environment {
         }
 
         @Override
-        public int referencedBy() {
-            return referencedBy;
+        public Reference[] referencedBy() {
+            Reference[] ref = referencedBy.values().toArray(new Reference[referencedBy.size()]);
+            Arrays.sort(ref, new Comparator<Reference>() {
+
+                @Override
+                public int compare(Reference o1, Reference o2) {
+                    return o2.getCount() - o1.getCount();
+                }
+
+            });
+
+            return ref;
         }
 
         @Override
@@ -349,7 +361,7 @@ public class Environment {
         final FieldCallback deeplyIterating = new FieldCallback() {
 
             @Override
-            public void visit(Object value) {
+            public void visit(String refName, Object value) {
                 iterateDeep(value, fc, this, visited);
             }
 
@@ -360,10 +372,11 @@ public class Environment {
         iterateDeep(instance, fc, deeplyIterating, visited);
     }
 
-    private void iterateDeep(Object instance, FieldCallback fc, FieldCallback deepIterator, Map<Object, Boolean> visited) {
+    private void iterateDeep(Object instance, FieldCallback fc, FieldCallback deepIterator,
+                Map<Object, Boolean> visited) {
         if (visited.put(instance, Boolean.TRUE) != null) return;
 
-        fc.visit(instance);
+        fc.visit("#", instance);
         ClassSchema<?> cs = getSchema(instance.getClass());
         cs.safeIterate(instance, deepIterator);
     }

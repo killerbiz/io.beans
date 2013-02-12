@@ -121,8 +121,6 @@ public final class SizeOf {
             out.print("}");
         }
         out.print(": ");
-        out.print(stats.referencedBy());
-        out.print(stats.referencedBy() <= 1 ? " reference to " : " references to ");
         out.print(stats.instanceCount());
         out.print(stats.instanceCount() <= 1 ? " instance" : " instances");
         if (stats.totalSize() > 0) {
@@ -130,6 +128,7 @@ public final class SizeOf {
             out.print(stats.totalSize());
             out.print(" bytes");
         }
+        out.flush();
     }
 
     /**
@@ -148,7 +147,16 @@ public final class SizeOf {
             out.print("* ");
             printClassStats(cs, out);
             out.println();
+            for (ClassStats.Reference r : cs.referencedBy()) {
+                out.print("  + ");
+                out.print(r.getName());
+                out.print(": ");
+                out.print(r.getCount());
+                out.println(r.getCount() < 2 ? " reference" : " references");
+            }
         }
+
+        out.flush();
     }
 
     /**

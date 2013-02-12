@@ -9,7 +9,7 @@ package io.beans.sizeof;
  */
 public interface FieldCallback {
 
-    void visit(Object value);
+    void visit(String reference, Object value);
 
     void finished();
 }
