@@ -41,8 +41,8 @@ public final class SizeOf {
     public static Environment createDefaultEnvironment() {
         Environment e = createEnvironment();
         e.addGlobalType(Enum.class).addGlobalType(Class.class);
-        e.addGlobalObjectsFrom(System.class, StaticFieldPolicy.DIRECT_REFERENCES).addGlobalObjectsFrom(Collections.class,
-                StaticFieldPolicy.DIRECT_REFERENCES);
+        e.register(System.class, StaticFieldPolicy.DIRECT_REFERENCES).register(
+                Collections.class, StaticFieldPolicy.ONLY_CONSTANTS);
         return e;
     }
 

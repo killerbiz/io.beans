@@ -134,7 +134,9 @@ public class SizeOfTest {
         long bSize = c.statsFor(B.class).totalSize();
         assertEquals(aSize, bSize);
         long totalSize = c.memoryUsed();
-        assertTrue(aSize + bSize > totalSize);
+        // Both A and B should be using all memory
+        assertEquals(totalSize, aSize);
+        assertEquals(totalSize, bSize);
 
         c = SizeOf.createCollector();
         c.measure(a);
@@ -289,7 +291,8 @@ public class SizeOfTest {
         try {
             Thread.sleep(1000);
         } catch (InterruptedException ex) {
-            Logger.getLogger(SizeOfTest.class.getName()).log(Level.SEVERE, null, ex);
+            // Ignore
+            Thread.currentThread().interrupt();
         }
     }
 

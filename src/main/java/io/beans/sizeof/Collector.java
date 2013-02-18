@@ -15,7 +15,7 @@ import java.util.Map;
  */
 public class Collector implements Stats {
 
-    final Measurement measurement;
+    private final Measurement measurement;
 
     static class ClassCollector<T> {
         final ClassSchema<T> schema;
@@ -29,12 +29,18 @@ public class Collector implements Stats {
         ClassCollector(Environment env, Class<T> type) {
             assert !type.isInterface();
 
-            env.addGlobalObjectsFrom(type);
             schema = env.getSchema(type);
 
             for (Object o : env.getGlobalObjects()) {
                 if (o.getClass().equals(type)) instancesToRefCounts.put(o, null);
             }
+        }
+        
+        /**
+         * The type for which this instance collects data.
+         */
+        Class<T> getType() {
+            return schema.getType();
         }
 
         /**
@@ -49,13 +55,13 @@ public class Collector implements Stats {
         }
 
         /**
-         * Start measurement with a given bean to calczlate.
+         * Start measurement with a given bean to calculate.
          */
         void startWith(T instance, Measurement caller) {
             execute(instance, caller, true);
         }
 
-        private void execute(T instance, Measurement caller, boolean calcGlobalObjects) {
+        void execute(T instance, Measurement caller, boolean calcGlobalObjects) {
             if (instancesToRefCounts.containsKey(instance)) {
                 Integer count = instancesToRefCounts.get(instance);
                 if (count != null) {
@@ -87,7 +93,7 @@ public class Collector implements Stats {
         }
     }
 
-    static class GlobalClassCollector<T> extends ClassCollector<T> {
+    private static class GlobalClassCollector<T> extends ClassCollector<T> {
         GlobalClassCollector(Environment env, Class<T> type) {
             super(env, type);
         }
@@ -98,8 +104,8 @@ public class Collector implements Stats {
         }
     }
 
-    static class MemoryCountingClassCollector<T> extends ClassCollector<T> {
-        final Measurement classSpecificMeasurement;
+    private static class MemoryCountingClassCollector<T> extends ClassCollector<T> {
+        private final Measurement classSpecificMeasurement;
 
         MemoryCountingClassCollector(Environment env, Class<T> type) {
             super(env, type);
@@ -108,7 +114,7 @@ public class Collector implements Stats {
 
         @Override
         void calc(T instance, Measurement globalMeasurement) {
-            classSpecificMeasurement.measure(instance, schema);
+            classSpecificMeasurement.measureIfNew(instance);
             super.calc(instance, globalMeasurement);
         }
 
@@ -132,11 +138,22 @@ public class Collector implements Stats {
             classColl = new HashMap<Class<?>, ClassCollector<?>>();
         }
 
+        /**
+         * Measures the deep size of the given object.
+         */
         <T> void measure(T instance, ClassSchema<T> schema) {
             totalSize += schema.flatSize(instance);
             instanceCount++;
 
             schema.safeIterate(instance, this);
+        }
+
+        /**
+         * Measures the deep size of the given object if it is not measured yet.
+         **/
+        <T> void measureIfNew(T value) {
+            ClassCollector<T> cc = getClassCollector(value);
+            cc.execute(value, this, false);
         }
 
         final <T> ClassCollector<T> getClassCollector(T instance) {
@@ -155,6 +172,12 @@ public class Collector implements Stats {
             return new ClassCollector<T>(env, type);
         }
 
+        /**
+         * Measures the deep size of the given object if it is not measured yet, and
+         * registers the referencing source as the refName.
+         *
+         * This is called from the ClassSchema.
+         */
         @Override
         public void visit(String refName, Object value) {
             if (value != null) {
@@ -162,6 +185,10 @@ public class Collector implements Stats {
             }
         }
 
+        /**
+         * Measures the deep size of the given object if it is not measured yet, and
+         * registers the referencing source as the refName.
+         **/
         private <T> void refTo(String refName, T value) {
             ClassCollector<T> cc = getClassCollector(value);
             cc.ref(refName, value, this);

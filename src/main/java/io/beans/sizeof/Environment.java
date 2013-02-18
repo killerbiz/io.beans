@@ -1,6 +1,5 @@
 package io.beans.sizeof;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -12,10 +11,16 @@ import java.util.Map;
 import java.util.Set;
 
 import io.beans.sizeof.Collector.ClassCollector;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Comparator;
 
-
+/**
+ * The environment specifies whether and which kind of global objects exist.
+ *
+ * @author kuli
+ */
 public class Environment {
 
     private final Map<Class<?>, ClassSchema<?>> definitions = new HashMap<Class<?>, ClassSchema<?>>();
@@ -66,6 +71,14 @@ public class Environment {
         @Override
         public boolean accept(Field f) {
             return hasGlobalMarker(f);
+        }
+    };
+
+    final FieldFilter onlyGloballyAnnotatedAndConstants = new FieldFilter() {
+
+        @Override
+        public boolean accept(Field f) {
+            return Modifier.isFinal(f.getModifiers()) || hasGlobalMarker(f);
         }
     };
 
@@ -132,41 +145,73 @@ public class Environment {
         return false;
     }
 
+    /**
+     * Sets the static field policy for newly declared classes.
+     */
     public synchronized Environment setStaticFieldPolicy(StaticFieldPolicy staticFieldPolicy) {
         this.staticFieldPolicy = staticFieldPolicy;
         return this;
     }
 
+    /**
+     * Gets the static field policy for newly declared classes.
+     */
+    public StaticFieldPolicy getStaticFieldPolicy() {
+        return staticFieldPolicy;
+    }
+
+    /**
+     * Marks this object as being global.
+     */
     public synchronized Environment addGlobalInstance(Object g) {
-        if (g != null) globalObjects.put(g, null);
+        if (g != null) {
+            globalObjects.put(g, null);
+            register(g.getClass());
+        }
         return this;
     }
 
+    /**
+     * Marks the given instance and all its referenced values as being global.
+     */
     public synchronized Environment addFullGlobalTree(Object g) {
         iterateDeep(g, deepGlobalSetter);
         return addGlobalInstance(g);
     }
 
+    /**
+     * Marks the given type as a global one.
+     */
     public synchronized Environment addGlobalType(Class<?> g) {
         globalClasses.add(g);
-        definitions.clear();
         return this;
     }
 
+    /**
+     * Declares the given annotation as a global marker.
+     */
     public Environment addGlobalAnnotation(Class<? extends Annotation> g) {
         return addGlobalAnnotation(g, AnnotationFilter.DONT_MEASURE);
     }
 
-    public synchronized <A extends Annotation> Environment addGlobalAnnotation(Class<A> g,
-        AnnotationFilter<? super A> filter) {
+    /**
+     * Declares the given annotation as a global marker.
+     */
+    public synchronized <A extends Annotation> Environment addGlobalAnnotation(
+            Class<A> g, AnnotationFilter<? super A> filter) {
         globalAnnotations.put(g, filter);
         return this;
     }
 
-    public synchronized Set<Object> getGlobalObjects() {
+    Set<Object> getGlobalObjects() {
         return globalObjects.keySet();
     }
 
+    /**
+     * Checks whether a given value is global.
+     * This is the case if either the instance itself was marked as global,
+     * or if it is of a global type.
+     */
     public boolean isGlobal(Object value) {
         if (globalObjects.containsKey(value)) return true;
         for (Class<?> g : globalClasses) {
@@ -176,6 +221,10 @@ public class Environment {
         return classHasGlobalMarker(value.getClass());
     }
 
+    /**
+     * Checks whether the given type is marked as global,
+     * either explicit via addGlobalType(), or implicit by having a specific annotation.
+     */
     public boolean isGlobalClass(Class<?> type) {
         for (Class<?> g : globalClasses) {
             if (g.isAssignableFrom(type)) return true;
@@ -185,14 +234,39 @@ public class Environment {
     }
 
     <T> ClassSchema<T> getSchema(Class<T> type) {
+        return getSchema(type, staticFieldPolicy);
+    }
+
+    <T> ClassSchema<T> getSchema(Class<T> type, StaticFieldPolicy policy) {
         @SuppressWarnings("unchecked")
         ClassSchema<T> cs = (ClassSchema<T>) definitions.get(type);
         if (cs != null) return cs;
 
         cs = ClassSchema.createSchemaFor(type, allowOnlyNonGlobal);
         definitions.put(type, cs);
+        // Eventually register static values as constants
+        addGlobalObjectsFrom(type, policy);
 
         return cs;
+    }
+
+    /**
+     * Registers the given type as known.
+     * Eventually declare all static variable values as global, if not registered yet.
+     */
+    public Environment register(Class<?> type) {
+        getSchema(type);
+        return this;
+    }
+
+    /**
+     * Registers the given type as known.
+     * Eventually declare all static variable values as global, if not registered yet.
+     * This depends on the given argument.
+     */
+    public Environment register(Class<?> type, StaticFieldPolicy policy) {
+        getSchema(type, policy);
+        return this;
     }
 
     <T> ClassSchema<T> getSchema(T instance) {
@@ -201,11 +275,8 @@ public class Environment {
         return getSchema(c);
     }
 
-    public Environment addGlobalObjectsFrom(Class<?> type) {
-        return addGlobalObjectsFrom(type, staticFieldPolicy);
-    }
+    private Environment addGlobalObjectsFrom(Class<?> type, StaticFieldPolicy policy) {
 
-    public synchronized Environment addGlobalObjectsFrom(Class<?> type, StaticFieldPolicy policy) {
         ClassSchema.iterateStatic(type, policy.filterStatics(this), policy.addToGlobalsCallback(this));
         // Also add onstants from inner classes
         Class<?> c = type;
@@ -228,7 +299,7 @@ public class Environment {
     /**
      * Creates a new collector that calculates the total size, but maybe wihout the total size of each class.
      * 
-     * This is faster if the individual class mem size is not used.
+     * This will work faster if the individual class mem size is not used.
      */
     public Collector createCollector(boolean calcSizeForEachClass) {
 
