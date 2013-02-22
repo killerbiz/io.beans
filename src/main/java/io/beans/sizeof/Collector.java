@@ -142,7 +142,7 @@ public class Collector implements Stats {
          * Measures the deep size of the given object.
          */
         <T> void measure(T instance, ClassSchema<T> schema) {
-            totalSize += schema.flatSize(instance);
+            totalSize += schema.shallowSize(instance);
             instanceCount++;
 
             schema.safeIterate(instance, this);

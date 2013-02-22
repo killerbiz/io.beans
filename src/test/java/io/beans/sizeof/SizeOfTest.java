@@ -298,8 +298,8 @@ public class SizeOfTest {
 
     // @Test // Long-running test - disabled
     public void largeArrayTestXX() {
-        long emptyArraySize = SizeOf.flatSizeOf(new Object[0]);
-        long arr256Size = SizeOf.flatSizeOf(new Object[256]);
+        long emptyArraySize = SizeOf.shallowSizeOf(new Object[0]);
+        long arr256Size = SizeOf.shallowSizeOf(new Object[256]);
         long refLength = (arr256Size - emptyArraySize) / 256;
 
         long dateSize = SizeOf.sizeOf(new Date());

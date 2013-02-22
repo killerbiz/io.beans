@@ -95,19 +95,20 @@ public final class SizeOf {
      * Utility method to quickly calculate the used memory for a group of instances.
      * 
      * Instances that are referenced by multiple parents count only once.
+     * Another name for this method would be deepSizeOf()...
      */
     public static long sizeOf(Object... instances) {
         return getWeakEnvironmentInstance().sizeOf(instances);
     }
 
     /**
-     * Gets the flat size of the instance, without any references.
+     * Gets the shallow size of the instance, without any references.
      * 
      * For arrays, this depends on the array's length, otherwise it only depends on the instance's type.
      */
-    public static long flatSizeOf(Object instance) {
+    public static long shallowSizeOf(Object instance) {
         if (instance == null) return 0;
-        return getWeakEnvironmentInstance().getSchema(instance).flatSize(instance);
+        return getWeakEnvironmentInstance().getSchema(instance).shallowSize(instance);
     }
 
     /**

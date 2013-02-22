@@ -95,7 +95,7 @@ public abstract class ClassSchema<T> {
         return type;
     }
 
-    public abstract long flatSize(T instance);
+    public abstract long shallowSize(T instance);
 
     private static class FieldRef {
         final String name;
@@ -111,7 +111,7 @@ public abstract class ClassSchema<T> {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + " for " + type.getName() + " {" + flatSize(null) + "}";
+        return getClass().getSimpleName() + " for " + type.getName() + " {" + shallowSize(null) + "}";
     }
 
     private static class ObjectClassSchema<T> extends ClassSchema<T> {
@@ -170,7 +170,7 @@ public abstract class ClassSchema<T> {
         }
 
         @Override
-        public long flatSize(Object instance) {
+        public long shallowSize(Object instance) {
             return size;
         }
 
@@ -193,7 +193,7 @@ public abstract class ClassSchema<T> {
         }
 
         @Override
-        public long flatSize(T array) {
+        public long shallowSize(T array) {
             if (array == null) return baseOffset;
 
             return alignAddress(stopAddress(array));

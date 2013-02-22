@@ -375,7 +375,7 @@ public class Environment {
 
         @Override
         public long length() {
-            return schema.flatSize(null);
+            return schema.shallowSize(null);
         }
 
         @Override
