@@ -23,13 +23,13 @@ import java.util.Comparator;
  */
 public class Environment {
 
-    private final Map<Class<?>, ClassSchema<?>> definitions = new HashMap<Class<?>, ClassSchema<?>>();
+    private final Map<Class<?>, ClassSchema<?>> definitions = new HashMap<>();
 
-    private final Collection<Class<?>> globalClasses = new HashSet<Class<?>>();
+    private final Collection<Class<?>> globalClasses = new HashSet<>();
 
-    private final Map<Class<? extends Annotation>, AnnotationFilter<? extends Annotation>> globalAnnotations = new HashMap<Class<? extends Annotation>, AnnotationFilter<? extends Annotation>>();
+    private final Map<Class<? extends Annotation>, AnnotationFilter<? extends Annotation>> globalAnnotations = new HashMap<>();
 
-    private final Map<Object, Void> globalObjects = new IdentityHashMap<Object, Void>();
+    private final Map<Object, Void> globalObjects = new IdentityHashMap<>();
 
     private StaticFieldPolicy staticFieldPolicy;
 
@@ -43,9 +43,7 @@ public class Environment {
             for (Class<?> g : globalClasses) {
                 if (g.isAssignableFrom(fieldType)) return false;
             }
-            if (hasGlobalMarker(fieldType)) return false;
-
-            return true;
+            return !hasGlobalMarker(fieldType);
         }
     };
 
@@ -60,9 +58,7 @@ public class Environment {
             for (Class<?> g : globalClasses) {
                 if (g.isAssignableFrom(fieldType)) return false;
             }
-            if (hasGlobalMarker(fieldType)) return false;
-
-            return true;
+            return !hasGlobalMarker(fieldType);
         }
     };
 
@@ -422,11 +418,11 @@ public class Environment {
 
     <T> ClassStats<T> classStatsFor(ClassCollector<T> cc) {
         if (cc == null) return null;
-        return new MyClassStats<T>(cc);
+        return new MyClassStats<>(cc);
     }
 
     void iterateDeep(Object instance, final FieldCallback fc) {
-        final Map<Object, Boolean> visited = new IdentityHashMap<Object, Boolean>();
+        final Map<Object, Boolean> visited = new IdentityHashMap<>();
         visited.put(null, Boolean.TRUE); // Null values are always skipped
 
         final FieldCallback deeplyIterating = new FieldCallback() {

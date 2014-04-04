@@ -24,7 +24,7 @@ public interface AnnotationFilter<A extends Annotation> {
     boolean isGlobal(AnnotatedElement fieldOrClass, A annotation);
 
     /**
-     * A convienient instance that marks all elements as global that are annotated with A.
+     * A convenient instance that marks all elements as global that are annotated with A.
      */
     AnnotationFilter<Annotation> DONT_MEASURE = new AnnotationFilter<Annotation>() {
         @Override

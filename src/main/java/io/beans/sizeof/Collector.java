@@ -20,11 +20,11 @@ public class Collector implements Stats {
     static class ClassCollector<T> {
         final ClassSchema<T> schema;
 
-        final Map<Object, Integer> instancesToRefCounts = new IdentityHashMap<Object, Integer>();
+        final Map<Object, Integer> instancesToRefCounts = new IdentityHashMap<>();
 
         int instanceCount;
 
-        final Map<String, ClassStats.Reference> referencedBy = new HashMap<String, ClassStats.Reference>();
+        final Map<String, ClassStats.Reference> referencedBy = new HashMap<>();
 
         ClassCollector(Environment env, Class<T> type) {
             assert !type.isInterface();
@@ -135,7 +135,7 @@ public class Collector implements Stats {
 
         Measurement(Environment env) {
             this.env = env;
-            classColl = new HashMap<Class<?>, ClassCollector<?>>();
+            classColl = new HashMap<>();
         }
 
         /**
@@ -162,14 +162,14 @@ public class Collector implements Stats {
             if (cc == null) {
                 @SuppressWarnings("unchecked")
                 Class<T> type = (Class<T>) instance.getClass();
-                cc = env.isGlobalClass(type) ? new GlobalClassCollector<T>(env, type) : createNewCollector(type);
+                cc = env.isGlobalClass(type) ? new GlobalClassCollector<>(env, type) : createNewCollector(type);
                 classColl.put(type, cc);
             }
             return cc;
         }
 
         <T> ClassCollector<T> createNewCollector(Class<T> type) {
-            return new ClassCollector<T>(env, type);
+            return new ClassCollector<>(env, type);
         }
 
         /**
@@ -224,7 +224,7 @@ public class Collector implements Stats {
 
         @Override
         <T> ClassCollector<T> createNewCollector(Class<T> type) {
-            return new MemoryCountingClassCollector<T>(env, type);
+            return new MemoryCountingClassCollector<>(env, type);
         }
     }
 

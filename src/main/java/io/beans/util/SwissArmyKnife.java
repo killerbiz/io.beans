@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import sun.reflect.CallerSensitive;
 
 
 /**
@@ -144,6 +145,7 @@ public class SwissArmyKnife {
             }
         }
 
+        @Override
         public Field next() {
             if (currentClass == null) throw new NoSuchElementException();
 
@@ -152,10 +154,12 @@ public class SwissArmyKnife {
             return f;
         }
 
+        @Override
         public boolean hasNext() {
             return currentClass != null;
         }
 
+        @Override
         public void remove() {
             throw new UnsupportedOperationException("Not supported yet.");
         }
@@ -203,7 +207,7 @@ public class SwissArmyKnife {
      * @throws IllegalStateException if there are at least two field containing values of the requested type
      */
     public static <T> T peek(final Object target, final Class<T> fieldType) {
-        final AtomicReference<T> ref = new AtomicReference<T>();
+        final AtomicReference<T> ref = new AtomicReference<>();
 
         for (Iterator<Field> i = new FieldIterator(target.getClass()); i.hasNext(); ) {
             Field f = i.next();
@@ -239,7 +243,7 @@ public class SwissArmyKnife {
     /**
      * Checks whether a given value is of a given type.
      * 
-     * In contrast to normal instanceof checks, this does also check whether the value is of the appropiate wrapper type
+     * In contrast to normal instanceof checks, this does also check whether the value is of the appropriate wrapper type
      * if the expected class is a primitive.
      * 
      * @param type The checked class
@@ -261,12 +265,12 @@ public class SwissArmyKnife {
     /**
      * Checks whether a given class 'superClass' is a super class of another class 'subClass'.
      * 
-     * In contrast to normal instanceof checks, this does also check whether B is of the appropiate wrapper type of the
+     * In contrast to normal instanceof checks, this does also check whether B is of the appropriate wrapper type of the
      * possible primitive type B.
      * 
      * @param superType A
      * @param subType B
-     * @return <code>true</code> if an instanceof of type 'subClass' can be feched from a {@link Field} or method return
+     * @return <code>true</code> if an instance of type 'subClass' can be fetched from a {@link Field} or method return
      *         value of type 'superClass' without throwing a {@link ClassCastException}
      */
     public static boolean isAssignableFrom(Class<?> superType, Class<?> subType) {
@@ -323,16 +327,16 @@ public class SwissArmyKnife {
     }
 
     /**
-     * Gets the Log4j {@link Logger} for the calling class.
+     * Gets the {@link Logger} for the calling class.
      */
-    @SuppressWarnings("restriction")
+    @CallerSensitive
     public static Logger getLogger() {
-        int indirection = 2;
-        Class<?> callingClass;
-        do {
-            callingClass = sun.reflect.Reflection.getCallerClass(indirection++);
-            if (callingClass == null) return null;
-        } while (SwissArmyKnife.class.isAssignableFrom(callingClass));
+        return getLogger0();
+    }
+
+    private static Logger getLogger0() {
+        Class<?> callingClass = sun.reflect.Reflection.getCallerClass();
+        if (callingClass == null) return null;
 
         return Logger.getLogger(callingClass.getName());
     }
@@ -346,6 +350,7 @@ public class SwissArmyKnife {
      * 
      * @param parameters The logged values. Unless they are Strings, the full internal representation gets logged.
      */
+    @CallerSensitive
     public static void log(Object... parameters) {
         StringBuilder sb = new StringBuilder();
         for (Object p : parameters) {
@@ -357,25 +362,18 @@ public class SwissArmyKnife {
         }
         String message = sb.toString();
 
-        PrintStream out = getSystemOut();
-        out.println(message);
+        System.out.println(message);
 
-        Logger logger = getLogger();
+        Logger logger = getLogger0();
+        if (logger == null) {
+            throw new AssertionError("Cannot get caller class");
+        }
         if (logger.isLoggable(Level.FINE)) {
             logger.fine(message);
         } else if (logger.isLoggable(Level.INFO)) {
             logger.info(message);
         } else {
             logger.warning(message);
-        }
-    }
-
-    private static PrintStream getSystemOut() {
-        try {
-            Field f = System.class.getField("out");
-            return (PrintStream) f.get(null);
-        } catch (Exception ex) {
-            throw new InternalError("Unable to fetch System.out");
         }
     }
 
@@ -388,7 +386,7 @@ public class SwissArmyKnife {
      * 
      * The finest parameter specifies the fines displayed time unit.
      */
-    public static String printDuration(long durationInNanos, TimeUnit finest) {
+    public static String durationAsString(long durationInNanos, TimeUnit finest) {
         long nanos = durationInNanos % 1000000L;
         durationInNanos /= 1000000L;
         long millis = durationInNanos % 1000L;
@@ -460,7 +458,7 @@ public class SwissArmyKnife {
         r.run();
         long duration = System.nanoTime() - nanos;
 
-        log("Execution took " + printDuration(duration, TimeUnit.MILLISECONDS));
+        log("Execution took " + durationAsString(duration, TimeUnit.MILLISECONDS));
     }
 
     /**
@@ -529,7 +527,7 @@ public class SwissArmyKnife {
      * @return The given StringBuilder instance itself
      */
     public static StringBuilder fullPrint(Object o, StringBuilder sb, int depth, int maxLength) {
-        return append(sb, o, new HashSet<Object>(), depth, 0, maxLength);
+        return append(sb, o, new HashSet<>(), depth, 0, maxLength);
     }
 
     private static final int INVISIBLE_MODIFIERS = Modifier.STATIC | Modifier.TRANSIENT;

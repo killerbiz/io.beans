@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import io.beans.util.SwissArmyKnife;
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -87,7 +88,7 @@ public class SizeOfTest {
         assertEquals(10, cs.instanceCount());
         assertEquals(10, cs.referencedBy()[0].getCount());
 
-        Set<Rectangle> rects = new HashSet<Rectangle>();
+        Set<Rectangle> rects = new HashSet<>();
         for (Rectangle r : cs.instances()) {
             assertEquals(2 * r.x, r.y);
             assertEquals(3 * r.x, r.width);
@@ -171,7 +172,7 @@ public class SizeOfTest {
         assertTrue(integerSize > 0);
         assertEquals(integerSize, SizeOf.sizeOf(global)); // Direct calls to global will compute its size
 
-        AtomicReference<Integer> container = new AtomicReference<Integer>();
+        AtomicReference<Integer> container = new AtomicReference<>();
         long containerSize = SizeOf.sizeOf(container);
         container.set(global);
         assertEquals(containerSize, SizeOf.sizeOf(container));
@@ -185,7 +186,7 @@ public class SizeOfTest {
         AtomicReference<Enum<TimeUnit>> enumContainer = new AtomicReference<Enum<TimeUnit>>(TimeUnit.DAYS);
         assertEquals(containerSize, SizeOf.sizeOf(enumContainer));
 
-        AtomicReference<Singleton> singletonContainer = new AtomicReference<Singleton>(Singleton.INSTANCE);
+        AtomicReference<Singleton> singletonContainer = new AtomicReference<>(Singleton.INSTANCE);
         assertEquals(containerSize, SizeOf.sizeOf(singletonContainer));
         singletonContainer.set(new Singleton());
         Collector c = SizeOf.createCollectorWith(singletonContainer);
@@ -274,8 +275,8 @@ public class SizeOfTest {
     @Test
     public void referenceTest() {
         String referenced = "Hello World!";
-        AtomicReference<String> ref1 = new AtomicReference<String>(referenced);
-        List<String> ref2 = new ArrayList<String>();
+        AtomicReference<String> ref1 = new AtomicReference<>(referenced);
+        List<String> ref2 = new ArrayList<>();
         ref2.add(referenced);
         String[] ref3 = new String[] { referenced, referenced, referenced };
 
@@ -306,20 +307,15 @@ public class SizeOfTest {
 
         try {
             for (int l = 16; l > 0; l <<= 1) {
-                try {
-                    System.gc();
-                    Thread.sleep(1000L);
-                } catch (InterruptedException ex) {
-                    LOGGER.warning("Interrupted!");
-                    return;
-                }
+                System.gc();
+                LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(1));
                 long nanoStart = System.nanoTime();
                 Date[] array = createArray(l);
                 long nanoSecond = System.nanoTime();
                 long size = SizeOf.sizeOf((Object) array);
                 long nanoEnd = System.nanoTime();
                 LOGGER.log(Level.FINE, "Array with length {0} has size {1}; creation took {2}, calculation took {3}",
-                        new Object[]{l, size, SwissArmyKnife.printDuration(nanoSecond - nanoStart, TimeUnit.MILLISECONDS), SwissArmyKnife.printDuration(nanoEnd - nanoSecond, TimeUnit.MILLISECONDS)});
+                        new Object[]{l, size, SwissArmyKnife.durationAsString(nanoSecond - nanoStart, TimeUnit.MILLISECONDS), SwissArmyKnife.durationAsString(nanoEnd - nanoSecond, TimeUnit.MILLISECONDS)});
                 assertEquals(emptyArraySize + l * dateSize + l * refLength, size);
             }
         } catch (OutOfMemoryError ex) {

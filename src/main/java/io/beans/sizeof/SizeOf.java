@@ -11,7 +11,7 @@ import io.beans.util.SwissArmyKnife;
 /**
  * Utility class to calculate the used memory space of objects.
  * 
- * Calculates the total size of instancs, including a list of instantiated classes and their total size within the
+ * Calculates the total size of instances, including a list of instantiated classes and their total size within the
  * elements block.
  * 
  * @author kuli
@@ -60,7 +60,7 @@ public final class SizeOf {
         Environment e = defaultEnvironment == null ? null : defaultEnvironment.get();
         if (e == null) {
             e = createDefaultEnvironment();
-            defaultEnvironment = new WeakReference<Environment>(e);
+            defaultEnvironment = new WeakReference<>(e);
         }
 
         return e;

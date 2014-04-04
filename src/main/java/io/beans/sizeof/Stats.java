@@ -1,7 +1,7 @@
 package io.beans.sizeof;
 
 /**
- * Returns statistics for either a class or an objecvt.
+ * Returns statistics for either a class or an object.
  * 
  * @author kuli
  */

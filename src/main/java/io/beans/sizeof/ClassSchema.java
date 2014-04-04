@@ -239,12 +239,12 @@ public abstract class ClassSchema<T> {
     public static <T> ClassSchema<T> createSchemaFor(Class<T> type, FieldFilter filter) {
         if (type.isArray()) {
             if (type.getComponentType().isPrimitive()) {
-                return new PrimitiveArraySchema<T>(type);
+                return new PrimitiveArraySchema<>(type);
             } else {
-                return new ObjectArraySchema<T>(type);
+                return new ObjectArraySchema<>(type);
             }
         } else {
-            return new ObjectClassSchema<T>(type, filter);
+            return new ObjectClassSchema<>(type, filter);
         }
     }
 
